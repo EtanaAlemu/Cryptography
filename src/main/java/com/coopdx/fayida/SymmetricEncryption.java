@@ -15,6 +15,7 @@ import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -101,10 +102,6 @@ public class SymmetricEncryption {
         GCMParameterSpec parameterSpec = new GCMParameterSpec(128, iv); //128 bit auth tag length
         cipher.init(Cipher.ENCRYPT_MODE, secretKey, parameterSpec);
 
-//        if (associatedData != null) {
-//            cipher.updateAAD(associatedData);
-//        }
-
         byte[] cipherText = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
 
         ByteBuffer byteBuffer = ByteBuffer.allocate(iv.length + cipherText.length);
@@ -122,7 +119,7 @@ public class SymmetricEncryption {
      * @return original plaintext
      * @throws Exception if anything goes wrong
      */
-    private static String decryptAesGcm(byte[] cipherMessage, String SECRET_KEY, String SALTVALUE) throws Exception {
+    private static byte[] decryptAesGcm(byte[] cipherMessage, String SECRET_KEY, String SALTVALUE) throws Exception {
 
         /* Create factory for secret keys. */
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
@@ -136,29 +133,32 @@ public class SymmetricEncryption {
         AlgorithmParameterSpec gcmIv = new GCMParameterSpec(128, cipherMessage, 0, GCM_IV_LENGTH);
         cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmIv);
 
-//        if (associatedData != null) {
-//            cipher.updateAAD(associatedData);
-//        }
         //use everything from 12 bytes on as ciphertext
         byte[] plainText = cipher.doFinal(cipherMessage, GCM_IV_LENGTH, cipherMessage.length - GCM_IV_LENGTH);
 
-        return new String(plainText, StandardCharsets.UTF_8);
+        return plainText;
     }
     /* Driver Code */
     public static void main(String[] args) throws Exception {
-        /* Call the encrypt() method and store result of encryption. */
-        String encryptedval = encryptAesCbc(args[0],args[1],args[2]);
+        /* Call to encrypt() method and store result of encryption. */
+        String encryptedVal = encryptAesCbc(args[0],args[1],args[2]);
         /* Call the decrypt() method and store result of decryption. */
-        String decryptedval = decryptAesCbc(encryptedval,args[1],args[2]);
+        String decryptedVal =  decryptAesCbc(encryptedVal,args[1],args[2]);
         /* Display the original message, encrypted message and decrypted message on the console. */
         System.out.println("Original value: " + args[0]);
-        System.out.println("Encrypted CBC value: " + encryptedval);
-        System.out.println("Decrypted CBC value: " + decryptedval);
+        System.out.println("Encrypted CBC value: " + encryptedVal);
+        System.out.println("Decrypted CBC value: " + decryptedVal);
 
-        byte[] cipherText = encryptAesGcm(args[0], args[1], args[2]);
-        String decrypted = decryptAesGcm(cipherText, args[1], args[2]);
+        byte[] encrypted = encryptAesGcm(args[0], args[1], args[2]);
+        byte[] decrypted = decryptAesGcm(encrypted, args[1], args[2]);
 
-        System.out.println("Encrypted GCM value: " + cipherText);
-        System.out.println("Decrypted GCM value: " + decrypted);
+        String encryptedBase64 = Base64.getEncoder()
+                .encodeToString(encrypted);
+        System.out.println("Encrypted GCM value: " + encryptedBase64);
+        System.out.println("Decrypted GCM value: " + new String(decrypted, StandardCharsets.UTF_8));
+
+
+        System.out.println("Decrypted GCM value of 7HVHh29+IL1d5GHhbYNf8jJ3LLWKthGAfZ7P8gU5vDQ=: " +
+                new String(decryptAesGcm(Base64.getDecoder().decode("7HVHh29+IL1d5GHhbYNf8jJ3LLWKthGAfZ7P8gU5vDQ="), args[1], args[2]), StandardCharsets.UTF_8));
     }
 }
